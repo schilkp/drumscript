@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "drumscript"
+version = "0.0.1"
+description = ""
+authors = ["schilkp <schilk.philipp@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "~3.9.0"
+demucs = "4.0.1"
+wavefile = "^1.6.2"
+pydub = "^0.25.1"
+
+[tool.poetry.group.dev.dependencies]
+black = "^24.4.2"
