@@ -1,2 +1,5 @@
 __pycache__
 out/*
+*.opus
+*.m4a
+do.zsh
