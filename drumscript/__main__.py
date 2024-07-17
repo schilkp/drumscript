@@ -1,6 +1,7 @@
 import argparse
-import os
 import shutil
+from os import listdir
+from os.path import abspath, basename, dirname, isfile, join, splitext
 
 import demucs.separate
 import numpy as np
@@ -26,32 +27,25 @@ def write(filename, sr, x):
     song.export(filename, format="mp3", bitrate="320k")
 
 
-def main():
-    parser = argparse.ArgumentParser(description='drumscript')
-    parser.add_argument('-i', help='input file', required=True)
-    parser.add_argument('-o', help='output folder', required=True)
-    parser.add_argument('-t', help='title', required=True)
-    args = vars(parser.parse_args())
+def process(file: str, result_folder: str):
+    project_path = dirname(abspath(join(__file__, "..")))
 
-    project_path = os.path.dirname(
-        os.path.abspath(os.path.join(__file__, "..")))
+    split_outpath = join(project_path, "out")
 
-    outpath = os.path.join(project_path, "out")
+    demucs.separate.main(["-n", MODEL, file, "-o", split_outpath])
 
-    demucs.separate.main(["-n", MODEL, args["i"], "-o", outpath])
+    input_file_name, input_ext = splitext(basename(file))
 
-    input_file_name, input_ext = os.path.splitext(os.path.basename(args["i"]))
-
-    outpath_actual = os.path.join(outpath, MODEL, input_file_name)
+    outpath_actual = join(split_outpath, MODEL, input_file_name)
 
     print("loading drums..")
-    sr, drums = wavefile.load(os.path.join(outpath_actual, "drums.wav"))
+    sr, drums = wavefile.load(join(outpath_actual, "drums.wav"))
     print("loading bass..")
-    sr, bass = wavefile.load(os.path.join(outpath_actual, "bass.wav"))
+    sr, bass = wavefile.load(join(outpath_actual, "bass.wav"))
     print("loading other..")
-    sr, other = wavefile.load(os.path.join(outpath_actual, "other.wav"))
+    sr, other = wavefile.load(join(outpath_actual, "other.wav"))
     print("loading vocals..")
-    sr, vocals = wavefile.load(os.path.join(outpath_actual, "vocals.wav"))
+    sr, vocals = wavefile.load(join(outpath_actual, "vocals.wav"))
 
     minlen = min([drums.shape[1], bass.shape[1],
                  other.shape[1], vocals.shape[1]])
@@ -68,15 +62,43 @@ def main():
                                                EXTRA_DRUMS_OTHERS_DB/20) + drums * pow(10, EXTRA_DRUMS_DB/20)
 
     print("saving drumless..")
-    write(os.path.join(args["o"], args["t"] + " (drumless).mp3"), sr, drumless)
+    write(join(result_folder, input_file_name + " (drumless).mp3"), sr, drumless)
 
     print("saving extra drums..")
-    write(os.path.join(args["o"], args["t"] +
+    write(join(result_folder, input_file_name +
           " (extra drums).mp3"), sr, extra_drum)
 
     print("saving full..")
-    shutil.copy(args["i"], os.path.join(
-        args["o"], args["t"] + " (full)" + input_ext))
+    shutil.copy(file, join(result_folder,
+                input_file_name + " (full)" + input_ext))
+
+
+def main():
+    parser = argparse.ArgumentParser(description='drumscript')
+    parser.add_argument('-i', help='input file/folder', required=True)
+    parser.add_argument('-o', help='output folder', required=True)
+    args = vars(parser.parse_args())
+
+    print(f"Processing from: '{args['i']}'")
+    print(f"Storing to: '{args['o']}'")
+
+    files = []
+    if isfile(args["i"]):
+        files.append(abspath(args["i"]))
+    else:
+        for file in listdir(args["i"]):
+            file = join(args["i"], file)
+            if isfile(file) and not file in [".", ".."]:
+                files.append(file)
+
+
+    print(f"Processing {len(files)} files:")
+    for file in files:
+        print(f"  {file}")
+    
+    for file in files:
+        process(file, args["o"])
+
 
 if __name__ == '__main__':
     main()
